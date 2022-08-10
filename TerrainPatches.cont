@@ -1,0 +1,53 @@
+#version 400
+#define dMin 20
+#define dMax 80
+#define lHigh 40
+#define lLow 20
+
+layout(vertices = 4) out;
+
+uniform vec4 eyePos;
+
+float edgeCenter(vec4 edge0, vec4 edge1, float currTess){
+	edge0 - abs((edge0 - edge1)/2);
+
+	float dist = abs(distance(edge0, eyePos));
+	float tessLev = (dist - dMin)/(dMax-dMin)*(lLow - lHigh) + lHigh;
+	if (tessLev > currTess) {
+		tessLev = 1;
+    } else
+		tessLev = 2;
+	return tessLev;
+}
+
+float getTess(float dist0, float dist1){
+	float aveDist = abs(dist0 + dist1) /2;
+	float tessLev = (aveDist - dMin)/(dMax-dMin)*(lLow - lHigh) + lHigh;
+	return tessLev;
+}
+
+//fix cracks by making outer tesselation to neighbours tesselation
+void main()
+{
+    gl_out[gl_InvocationID].gl_Position
+      = gl_in[gl_InvocationID].gl_Position;
+
+    vec4 position = gl_in[gl_InvocationID].gl_Position;
+
+	float dist0 = abs(distance(gl_in[0].gl_Position, eyePos));
+	float dist1 = abs(distance(gl_in[1].gl_Position, eyePos));
+	float dist2 = abs(distance(gl_in[2].gl_Position, eyePos));
+	float dist3 = abs(distance(gl_in[3].gl_Position, eyePos));
+
+	float aveDist = (dist0 + dist1 + dist2 + dist3)/4;
+
+    float Linner = (aveDist - dMin)/(dMax-dMin)*(lLow - lHigh) + lHigh;
+
+    gl_TessLevelOuter[0] = getTess(dist3, dist0);;
+    gl_TessLevelOuter[1] = getTess(dist0, dist1);;
+    gl_TessLevelOuter[2] = getTess(dist1, dist2);
+    gl_TessLevelOuter[3] = getTess(dist2, dist3);
+    gl_TessLevelInner[0] = Linner;
+    gl_TessLevelInner[1] = Linner;
+
+}

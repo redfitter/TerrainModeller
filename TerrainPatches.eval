@@ -1,0 +1,71 @@
+#version 400
+
+layout(quads, equal_spacing, ccw) in;
+
+uniform mat4 mvpMatrix;
+uniform sampler2D heightMap;
+uniform sampler2D heightMap1;
+uniform float watLoc;
+uniform int texNum;
+
+out EV_OUT
+{
+    float ev_height;
+    vec3 vecNormal;
+    vec2 coords;
+    bool water;
+    float prev_height;
+} ev_out;
+
+void main()
+{
+    float xmin = -45, xmax = +45, zmin = 0, zmax = -90;
+    vec4 posn;
+    vec2 tcoord;
+    ev_out.water = false;
+
+    float u = gl_TessCoord.x;
+    float v = gl_TessCoord.y;
+
+    ev_out.coords = vec2(u, v);
+
+    posn = (1-u)* (1-v) * gl_in[0].gl_Position
+         +    u * (1-v) * gl_in[1].gl_Position
+         +    u *    v  * gl_in[2].gl_Position
+         + (1-u)*    v  * gl_in[3].gl_Position;
+
+    tcoord.s = (posn.x - xmin)/(xmax - xmin);
+    tcoord.t = (posn.z - zmin)/(zmax - zmin);
+
+    ev_out.ev_height = texture(heightMap, tcoord).r;
+
+    if (texNum == 1){
+        ev_out.ev_height = texture(heightMap1, tcoord).r;
+    }
+    ev_out.prev_height = ev_out.ev_height;
+
+    if (watLoc >= ev_out.ev_height) {
+        ev_out.water = true;
+        ev_out.ev_height = watLoc;
+    } else {    
+        float yL, yR, yU, yD;
+        float delta = 0.05;
+        //calculating the edge normals
+        if (texNum == 1){
+            yL = texture(heightMap1, vec2(tcoord.s - delta, tcoord.t)).r;
+            yR = texture(heightMap1, vec2(tcoord.s + delta, tcoord.t)).r;
+            yU = texture(heightMap1, vec2(tcoord.s , tcoord.t + delta)).r;
+            yD = texture(heightMap1, vec2(tcoord.s, tcoord.t - delta)).r;
+        } else {
+            yL = texture(heightMap, vec2(tcoord.s - delta, tcoord.t)).r;
+            yR = texture(heightMap, vec2(tcoord.s + delta, tcoord.t)).r;
+            yU = texture(heightMap, vec2(tcoord.s , tcoord.t + delta)).r;
+            yD = texture(heightMap, vec2(tcoord.s, tcoord.t - delta)).r;
+        }
+
+        ev_out.vecNormal = normalize(vec3(delta*(yL - yR), 2*delta, delta*(yD - yU)));
+
+    }
+    posn.y = ev_out.ev_height * 10.0;
+    gl_Position = posn;
+}
