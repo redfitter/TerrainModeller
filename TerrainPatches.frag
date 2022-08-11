@@ -26,6 +26,7 @@ void main()
      rockStr = max(0, min((10.0*(height - snwLoc + 0.3)), 1)) * min(1, max((-3.0*(height - snwLoc - 0.3)), 0));
      grassStr = min(1, max((-10.0*(height - snwLoc + 0.2)), 0));
 
+     //if is water texture overwrite equations above.
      if (height < (watLoc + 0.000001)){
           waterStr = 1;
           grassStr = 0;
@@ -34,11 +35,10 @@ void main()
      }
      colour = (SnowTex * snowStr) +  (RockTex * rockStr) + ((WaterTex) * waterStr) + (GrassTex * grassStr);
 
+     //adding the fog strength
+     colour = max((1 - fogStr) * colour + fogStr * vec4(1.0), vec4(fogStr));
+
+     // Uncomment following line to see flat colour for lighting.
      //colour = vec4(0,1,0,0);
-     colour = (1 - fogStr) * colour + fogStr * vec4(1.0);
-     
      gl_FragColor = colour * lightingFactor;
-     //gl_FragColor =  vec4(0,1,0,0);
-     //gl_FragColor = specOut;
 }
-//vec4(.9, .9, .9, 1)

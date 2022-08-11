@@ -7,6 +7,8 @@ uniform sampler2D heightMap;
 uniform sampler2D heightMap1;
 uniform float watLoc;
 uniform int texNum;
+uniform int timerTick;
+uniform int waveEnable;
 
 out EV_OUT
 {
@@ -16,6 +18,21 @@ out EV_OUT
     bool water;
     float prev_height;
 } ev_out;
+
+//tries to find the lowest slope for wave direction.
+float find(float x, float z, float s, float t){
+    float theta = 0;
+    float high = texture(heightMap1, vec2(s + 0.01 * sin(theta), t + 0.01 * cos(theta))).r;
+    float retTheta=0;
+    for (int i =0; i < 360;i+=15){
+        //degrees to radians
+        theta = i * 0.159154;
+        float tempd = texture(heightMap1, vec2(s + 0.01*sin(theta), t + 0.01*cos(theta))).r;
+        if (tempd > high) retTheta = theta;
+    }
+
+    return x*cos(retTheta) + z*sin(retTheta);
+}
 
 void main()
 {
@@ -45,12 +62,28 @@ void main()
     ev_out.prev_height = ev_out.ev_height;
 
     if (watLoc >= ev_out.ev_height) {
+        if (waveEnable == 1){
+            //enables waves not fully functional with normals
+            float x = posn.x;
+            float z = posn.z;
+            float d = find(posn.x, posn.z, tcoord.s, tcoord.t) - timerTick/15.0;
+            float y = 0.01 * sin(2.0*(d));
+            float dy = 0.02 * cos(2.0*(d));
+
+            // normal needs x derivitive                        here--\|/
+            ev_out.vecNormal = - normalize(cross(vec3(1,dy,0), vec3(0, 1 ,1)));
+            ev_out.ev_height = watLoc - 0.02 + y;
+        } else {
+            ev_out.vecNormal = vec3(0,1,0);
+            ev_out.ev_height = watLoc;
+        }
         ev_out.water = true;
-        ev_out.ev_height = watLoc;
+        
+
     } else {    
         float yL, yR, yU, yD;
         float delta = 0.05;
-        //calculating the edge normals
+        //calculating the edge normals for lighting
         if (texNum == 1){
             yL = texture(heightMap1, vec2(tcoord.s - delta, tcoord.t)).r;
             yR = texture(heightMap1, vec2(tcoord.s + delta, tcoord.t)).r;

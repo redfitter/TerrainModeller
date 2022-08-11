@@ -22,14 +22,14 @@ using namespace std;
 GLuint vaoID;
 GLuint texID[5];
 GLuint theProgram;
-GLuint mvpMatrixLoc, eyeLoc, lgtLoc, watLoc, snwLoc, texNum, fogEn;
+GLuint mvpMatrixLoc, eyeLoc, lgtLoc, watLoc, snwLoc, texNum, fogEn, timTic, waveEn;
 float lookAngle = 180.0, lookDepth = 20.0;
 float  eye_x = 0, eye_y = 40, eye_z = 30;      //Initial camera position
 float look_x = 0, look_y = -12, look_z = -40;    //"Look-at" point along -z direction
 float toRad = 3.14159265/180.0;     //Conversion from degrees to rad
 bool textureMode = true;
 GLfloat snowHeight = 0.8, waterHeight = 0.4, lightHeight = 80.0, lightx=40.0, lightz=-100.0;
-GLint textureNumber = 0, fogEnable = 0;
+GLint textureNumber = 0, fogEnable = 0, waveEnable = 0;
 float perlinGrid[1024 * 1024];
 
 float verts[100*3];       //10x10 grid (100 vertices)
@@ -199,6 +199,8 @@ void initialise()
 	watLoc = glGetUniformLocation(program, "watLoc");
 	texNum = glGetUniformLocation(program, "texNum");
 	fogEn = glGetUniformLocation(program, "fogEnable");
+	timTic = glGetUniformLocation(program, "timerTick");
+	waveEn = glGetUniformLocation(program, "waveEnable");
 
 	GLuint mapTexLoc = glGetUniformLocation(program, "heightMap");
 	glUniform1i(mapTexLoc, 0);
@@ -273,6 +275,7 @@ void display()
 	glUniform1f(snwLoc, snowHeight);
 	glUniform1i(texNum, textureNumber);
 	glUniform1i(fogEn, fogEnable);
+	glUniform1i(waveEn, waveEnable);
 
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	glBindVertexArray(vaoID);
@@ -310,6 +313,7 @@ void special(int key, int x, int y)
 
 void keyboard(unsigned char key, int x, int y)
 {
+	//enter Key
 	if (key == 13) eye_y++;
 
 	if (key == '['){
@@ -319,16 +323,18 @@ void keyboard(unsigned char key, int x, int y)
 		lookAngle-=10;
 	}
 
+	//water movement and clamping
 	if (key == 'q') waterHeight+=0.05;
 	else if (key == 'a') waterHeight-=0.05;
 	if (waterHeight > 1.0) waterHeight = 1.0;
 	if (waterHeight < 0.0) waterHeight = 0.0;
-	
+	//snow movement and clamping
 	if (key == 'w') snowHeight+=0.05;
 	else if (key == 's') snowHeight-=0.05;
 	if (snowHeight > 1.0) snowHeight = 1.0;
 	if (snowHeight < 0.0) snowHeight = 0.0;
 
+	//light movement
 	if (key == 'e') lightHeight+=10;
 	else if (key == 'd') lightHeight-=10;
 	if (key == 'l') lightx+=10;
@@ -336,18 +342,22 @@ void keyboard(unsigned char key, int x, int y)
 	if (key == 'k') lightz+=10;
 	else if (key == 'i') lightz-=10;
 
-	if (key == 'e' |key == 'd' |key == 'l' |key == 'j' |key == 'k' |key == 'i' )
-		printf("x:%f, y:%f, z:%f\n", lightx, lightHeight, lightz);
+	// if (key == 'e' |key == 'd' |key == 'l' |key == 'j' |key == 'k' |key == 'i' )
+		// printf("x:%f, y:%f, z:%f\n", lightx, lightHeight, lightz);
 
 	if (key == '1') textureNumber = 0;
 	else if (key == '2') textureNumber =1;
+
+	if (key == 'g') {
+		waveEnable = !waveEnable;
+	}
 
 	if (key == 'f') {
 		fogEnable = !fogEnable;
 	}
 	if (snowHeight < waterHeight) snowHeight = waterHeight + 0.02;
 
-	//printf("x:%f, y:%f, z:%f\n", look_x, look_y, look_z);
+	//Changing texture modes
 	if (key == ' ') {
 		textureMode = !textureMode;
 		if (textureMode)
@@ -360,6 +370,14 @@ void keyboard(unsigned char key, int x, int y)
 		}
 	}
 
+	glutPostRedisplay();
+}
+
+//timer function used for waves
+void timerFunc(int tick){
+	tick++;
+	glUniform1i(timTic, tick);
+	glutTimerFunc(50, timerFunc, tick);
 	glutPostRedisplay();
 }
 
@@ -385,6 +403,7 @@ int main(int argc, char** argv)
 
 	initialise();
 	glutDisplayFunc(display); 
+	glutTimerFunc(50, timerFunc, 0);
 	glutSpecialFunc(special);
 	glutKeyboardFunc(keyboard);
 	glutMainLoop();

@@ -8,37 +8,27 @@ layout(vertices = 4) out;
 
 uniform vec4 eyePos;
 
-float edgeCenter(vec4 edge0, vec4 edge1, float currTess){
-	edge0 - abs((edge0 - edge1)/2);
-
-	float dist = abs(distance(edge0, eyePos));
-	float tessLev = (dist - dMin)/(dMax-dMin)*(lLow - lHigh) + lHigh;
-	if (tessLev > currTess) {
-		tessLev = 1;
-    } else
-		tessLev = 2;
-	return tessLev;
-}
-
+//gets the tesselation level of edge between given distances.
 float getTess(float dist0, float dist1){
 	float aveDist = abs(dist0 + dist1) /2;
 	float tessLev = (aveDist - dMin)/(dMax-dMin)*(lLow - lHigh) + lHigh;
 	return tessLev;
 }
 
-//fix cracks by making outer tesselation to neighbours tesselation
 void main()
 {
     gl_out[gl_InvocationID].gl_Position
       = gl_in[gl_InvocationID].gl_Position;
 
     vec4 position = gl_in[gl_InvocationID].gl_Position;
-
+  
+  //finds the distance from camera for patch edges
 	float dist0 = abs(distance(gl_in[0].gl_Position, eyePos));
 	float dist1 = abs(distance(gl_in[1].gl_Position, eyePos));
 	float dist2 = abs(distance(gl_in[2].gl_Position, eyePos));
 	float dist3 = abs(distance(gl_in[3].gl_Position, eyePos));
 
+  //Use the average distance for the inner tesselation
 	float aveDist = (dist0 + dist1 + dist2 + dist3)/4;
 
     float Linner = (aveDist - dMin)/(dMax-dMin)*(lLow - lHigh) + lHigh;
